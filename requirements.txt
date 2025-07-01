@@ -1,0 +1,4 @@
+spacy>=3.7.0
+streamlit>=1.28.0
+
+# Instalar após spacy: python -m spacy download pt_core_news_sm 
