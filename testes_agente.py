@@ -1,6 +1,6 @@
 from agente import inicializar_contexto, interpretar_pergunta_nlp, executar_consulta
 
-# Inicializa contexto
+# Inicializa contexto para testes
 contexto = inicializar_contexto()
 
 # Lista de perguntas de teste
