@@ -17,7 +17,7 @@ if "historico" not in st.session_state:
 # Título e instrução
 st.markdown(
     """
-    # Desafio: Agente Industrial Inteligente
+    # Agente Industrial Inteligente
     """
 )
 
