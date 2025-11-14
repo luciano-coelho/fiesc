@@ -214,4 +214,3 @@ fiesc/
 - Interface web mais robusta
 - Persistência de contexto entre sessões
 - Suporte a múltiplos bancos de dados
-- Análise preditiva de manutenção
