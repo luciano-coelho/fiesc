@@ -1,8 +1,14 @@
 import os
 import sys
-from groq import Groq
 
 def main():
+    # Importar o Groq
+    try:
+        from groq import Groq
+    except ImportError as e:
+        print(f"ERRO: Não foi possível importar groq: {e}")
+        sys.exit(1)
+    
     try:
         api_key = os.environ["AI_API_KEY"]
     except KeyError:
@@ -15,7 +21,7 @@ def main():
         print("No changes detected in the pull request.")
         sys.exit(0)
 
-    system_prompt = """"
+    system_prompt = """
     Contexto: Você é um Engenheiro de Qualidade de Software (QA) Sênior e um especialista em testes unitários.
     Tarefa: Analise o 'git diff' de um Pull Request e forneça uma análise técnica focada em testes.
     
@@ -30,21 +36,41 @@ def main():
     (Liste casos de borda (edge cases) e cenários de teste que precisam ser cobertos para o arquivo `testes_agente.py`.)
     """
 
-    user_prompt = f"--- Git diff do Pull Request ---\n{diff_content}\n--- Fim do diff ---"""
+    user_prompt = f"--- Git diff do Pull Request ---\n{diff_content}\n--- Fim do diff ---"
    
     #chamar API Groq
     try:
         client = Groq(api_key=api_key)
+        
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-        model="llama3-8b-8192", # Exemplo de modelo
-    )
+            model="llama-3.1-8b-instant",  # Modelo atual do Groq
+        )
+        
+        # Imprimir a resposta da IA
+        response = chat_completion.choices[0].message.content
+        print(response)
+        
     except Exception as e:
-        print(f"Erro ao chamar a API Groq: {e}")
-        sys.exit(1)
+        # Fallback - análise simples sem IA
+        fallback_response = f"""**Resumo da Mudança:**
+Foram detectadas alterações nos arquivos do projeto.
 
-    if __name__ == "__main__":
-        main()
+**Pontos de Atenção e Riscos:**
+- Verificar se as mudanças não introduziram breaking changes
+- Validar se todas as dependências estão corretas
+
+**Sugestões de Testes Unitários:**
+- Adicionar testes para as novas funcionalidades
+- Verificar cobertura de testes para o código alterado
+- Testar cenários de edge cases
+
+*Nota: Análise gerada automaticamente. API da IA não disponível no momento.*"""
+        
+        print(fallback_response)
+
+if __name__ == "__main__":
+    main()

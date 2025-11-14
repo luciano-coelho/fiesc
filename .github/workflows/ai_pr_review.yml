@@ -17,7 +17,7 @@ jobs:
     - name: Checkout do Código
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Essencial para o git diff
+        fetch-depth: 0
 
     - name: Configurar Python 3.10
       uses: actions/setup-python@v5
@@ -32,19 +32,41 @@ jobs:
     - name: Calcular Diff do PR
       id: get_diff
       run: |
-        DIFF_CONTENT=$(git diff origin/${{ github.base_ref }}..${{ github.head_ref }})
+        echo "Fetching base branch..."
+        git fetch origin ${{ github.base_ref }}
+        
+        echo "Calculando diff..."
+        DIFF_CONTENT=$(git diff origin/${{ github.base_ref }}..HEAD)
+        
+        if [ -z "$DIFF_CONTENT" ]; then
+          echo "Diff vazio encontrado"
+          DIFF_CONTENT="Nenhuma alteração detectada no diff."
+        fi
         
         TRUNCATED_DIFF=$(echo "$DIFF_CONTENT" | head -c 15000)
         echo "PR_DIFF<<EOF" >> $GITHUB_ENV
         echo "$TRUNCATED_DIFF" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
+        
+        echo "Diff calculado com sucesso"
 
     - name: Chamar a API do Groq
       id: ai_analysis
       env:
         AI_API_KEY: ${{ secrets.AI_API_KEY }}
       run: |
-        RESPONSE=$(python scripts/call_ai_model.py)
+        echo "Executando análise da IA..."
+        echo "Conteúdo do PR_DIFF: ${PR_DIFF:0:200}..." # Primeiros 200 chars para debug
+        
+        if [ -z "$AI_API_KEY" ]; then
+          echo "Erro: AI_API_KEY não configurada"
+          RESPONSE="Erro: Chave da API não configurada nos secrets do repositório."
+        else
+          echo "Chamando script Python..."
+          RESPONSE=$(python scripts/call_ai_model.py 2>&1)
+          echo "Resposta recebida (primeiros 200 chars): ${RESPONSE:0:200}..."
+        fi
+        
         echo "AI_RESPONSE<<EOF" >> $GITHUB_ENV
         echo "$RESPONSE" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
@@ -55,16 +77,23 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const aiResponse = process.env.AI_RESPONSE;
+          console.log('AI Response recebida:', aiResponse ? aiResponse.substring(0, 200) + '...' : 'VAZIO');
+          
           if (!aiResponse || aiResponse.trim() === "" || aiResponse.trim() === "Diff vazio ou não fornecido. Nenhum código para analisar.") {
             console.log("Sem resposta da IA ou diff vazio. Pulando comentário.");
             return;
           }
           
-          const body = `### Auditoria de Testes (IA via Groq)\n\n${aiResponse}`;
-
-          github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body: body
-          });
+          const body = `### 🤖 Auditoria de Testes (IA via Groq)\n\n${aiResponse}`;
+          
+          try {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+            console.log('Comentário postado com sucesso!');
+          } catch (error) {
+            console.error('Erro ao postar comentário:', error);
+          }
