@@ -17,7 +17,8 @@ jobs:
     - name: Checkout do Código
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Essencial para o git diff
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Configurar Python 3.10
       uses: actions/setup-python@v5
@@ -32,11 +33,23 @@ jobs:
     - name: Calcular Diff do PR
       id: get_diff
       run: |
-        DIFF_CONTENT=$(git diff origin/${{ github.base_ref }}...${{ github.head_ref }})
+        echo "Fetching base branch..."
+        git fetch origin ${{ github.base_ref }}
+        
+        echo "Calculando diff..."
+        DIFF_CONTENT=$(git diff origin/${{ github.base_ref }}..HEAD)
+        
+        if [ -z "$DIFF_CONTENT" ]; then
+          echo "Diff vazio encontrado"
+          DIFF_CONTENT="Nenhuma alteração detectada no diff."
+        fi
+        
         TRUNCATED_DIFF=$(echo "$DIFF_CONTENT" | head -c 15000)
         echo "PR_DIFF<<EOF" >> $GITHUB_ENV
         echo "$TRUNCATED_DIFF" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
+        
+        echo "Diff calculado com sucesso"
 
     - name: Chamar a API do Groq
       id: ai_analysis
