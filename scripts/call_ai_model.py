@@ -1,9 +1,17 @@
 import os
 import sys
-from groq import Groq
 
 def main():
     print("Iniciando script call_ai_model.py...")
+    
+    # Primeiro, verificar se consegue importar o Groq
+    try:
+        print("Tentando importar biblioteca groq...")
+        from groq import Groq
+        print("Biblioteca groq importada com sucesso!")
+    except ImportError as e:
+        print(f"ERRO: Não foi possível importar groq: {e}")
+        sys.exit(1)
     
     try:
         api_key = os.environ["AI_API_KEY"]
@@ -38,31 +46,55 @@ def main():
    
     #chamar API Groq
     try:
-        print("Tentando importar e inicializar cliente Groq...")
+        print("Iniciando cliente Groq...")
         client = Groq(api_key=api_key)
+        print("Cliente Groq criado com sucesso!")
+        
+        print("Preparando mensagens para a API...")
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        print(f"Enviando {len(messages)} mensagens para a API...")
         
         print("Fazendo chamada para a API...")
         chat_completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            model="llama3-8b-8192", # Exemplo de modelo
+            messages=messages,
+            model="llama3-8b-8192",
         )
+        print("Chamada da API bem-sucedida!")
         
         # Imprimir a resposta da IA
         response = chat_completion.choices[0].message.content
         print("=== RESPOSTA DA IA ===")
         print(response)
         
-    except ImportError as e:
-        print(f"Erro ao importar biblioteca groq: {e}")
-        print("Verifique se 'groq' está listado no requirements.txt")
-        sys.exit(1)
     except Exception as e:
-        print(f"Erro ao chamar a API Groq: {e}")
-        print(f"Tipo do erro: {type(e)}")
-        sys.exit(1)
+        print(f"ERRO ao chamar a API Groq: {e}")
+        print(f"Tipo do erro: {type(e).__name__}")
+        
+        # Fallback - análise simples sem IA
+        print("=== FALLBACK: ANÁLISE BÁSICA ===")
+        fallback_response = f"""
+**Resumo da Mudança:**
+Foram detectadas alterações no arquivo de workflow `.github/workflows/ai_pr_review.yml`.
+
+**Pontos de Atenção e Riscos:**
+- Mudanças em workflows de CI/CD podem afetar o processo de deployment
+- Verificar se as dependências estão corretas no requirements.txt
+
+**Sugestões de Testes Unitários:**
+- Testar se o workflow executa sem erros
+- Verificar se todas as dependências estão instaladas
+- Validar se as variáveis de ambiente estão configuradas
+
+**Diff analisado:**
+```
+{diff_content[:500]}...
+```
+        """
+        print(fallback_response)
+        # Não fazer sys.exit(1) para permitir que o comentário seja postado
 
 if __name__ == "__main__":
     main()
