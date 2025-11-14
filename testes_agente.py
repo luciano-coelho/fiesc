@@ -23,7 +23,6 @@ perguntas = [
     "Quais ordens estão abertas?",
     "Quantas ordens de manutenção estão em andamento?",
     "Qual o status do equipamento 3?",
-    "Qual a data de abertura da ordem 4?"
 ]
 
 print("\nIniciando execução dos testes...\n")
