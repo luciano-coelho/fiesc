@@ -55,7 +55,18 @@ jobs:
       env:
         AI_API_KEY: ${{ secrets.AI_API_KEY }}
       run: |
-        RESPONSE=$(python scripts/call_ai_model.py)
+        echo "Executando análise da IA..."
+        echo "Conteúdo do PR_DIFF: ${PR_DIFF:0:200}..." # Primeiros 200 chars para debug
+        
+        if [ -z "$AI_API_KEY" ]; then
+          echo "Erro: AI_API_KEY não configurada"
+          RESPONSE="Erro: Chave da API não configurada nos secrets do repositório."
+        else
+          echo "Chamando script Python..."
+          RESPONSE=$(python scripts/call_ai_model.py 2>&1)
+          echo "Resposta recebida (primeiros 200 chars): ${RESPONSE:0:200}..."
+        fi
+        
         echo "AI_RESPONSE<<EOF" >> $GITHUB_ENV
         echo "$RESPONSE" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
@@ -66,16 +77,23 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const aiResponse = process.env.AI_RESPONSE;
+          console.log('AI Response recebida:', aiResponse ? aiResponse.substring(0, 200) + '...' : 'VAZIO');
+          
           if (!aiResponse || aiResponse.trim() === "" || aiResponse.trim() === "Diff vazio ou não fornecido. Nenhum código para analisar.") {
             console.log("Sem resposta da IA ou diff vazio. Pulando comentário.");
             return;
           }
           
-          const body = `### Auditoria de Testes (IA via Groq)\n\n${aiResponse}`;
-
-          github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body: body
-          });
+          const body = `### 🤖 Auditoria de Testes (IA via Groq)\n\n${aiResponse}`;
+          
+          try {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+            console.log('Comentário postado com sucesso!');
+          } catch (error) {
+            console.error('Erro ao postar comentário:', error);
+          }

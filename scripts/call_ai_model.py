@@ -40,11 +40,16 @@ def main():
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-        model="llama3-8b-8192", # Exemplo de modelo
-    )
+            model="llama3-8b-8192", # Exemplo de modelo
+        )
+        
+        # Imprimir a resposta da IA
+        response = chat_completion.choices[0].message.content
+        print(response)
+        
     except Exception as e:
         print(f"Erro ao chamar a API Groq: {e}")
         sys.exit(1)
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()
