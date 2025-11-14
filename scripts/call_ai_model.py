@@ -2,26 +2,20 @@ import os
 import sys
 
 def main():
-    print("Iniciando script call_ai_model.py...")
-    
-    # Primeiro, verificar se consegue importar o Groq
+    # Importar o Groq
     try:
-        print("Tentando importar biblioteca groq...")
         from groq import Groq
-        print("Biblioteca groq importada com sucesso!")
     except ImportError as e:
         print(f"ERRO: Não foi possível importar groq: {e}")
         sys.exit(1)
     
     try:
         api_key = os.environ["AI_API_KEY"]
-        print("API_KEY encontrada!")
     except KeyError:
         print("Error: AI_API_KEY environment variable not set.")
         sys.exit(1)
 
     diff_content = os.environ.get("PR_DIFF", "")
-    print(f"Diff content length: {len(diff_content)} characters")
 
     if not diff_content.strip():
         print("No changes detected in the pull request.")
@@ -46,55 +40,37 @@ def main():
    
     #chamar API Groq
     try:
-        print("Iniciando cliente Groq...")
         client = Groq(api_key=api_key)
-        print("Cliente Groq criado com sucesso!")
         
-        print("Preparando mensagens para a API...")
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-        print(f"Enviando {len(messages)} mensagens para a API...")
-        
-        print("Fazendo chamada para a API...")
         chat_completion = client.chat.completions.create(
-            messages=messages,
-            model="llama3-8b-8192",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            model="llama-3.1-8b-instant",  # Modelo atual do Groq
         )
-        print("Chamada da API bem-sucedida!")
         
         # Imprimir a resposta da IA
         response = chat_completion.choices[0].message.content
-        print("=== RESPOSTA DA IA ===")
         print(response)
         
     except Exception as e:
-        print(f"ERRO ao chamar a API Groq: {e}")
-        print(f"Tipo do erro: {type(e).__name__}")
-        
         # Fallback - análise simples sem IA
-        print("=== FALLBACK: ANÁLISE BÁSICA ===")
-        fallback_response = f"""
-**Resumo da Mudança:**
-Foram detectadas alterações no arquivo de workflow `.github/workflows/ai_pr_review.yml`.
+        fallback_response = f"""**Resumo da Mudança:**
+Foram detectadas alterações nos arquivos do projeto.
 
 **Pontos de Atenção e Riscos:**
-- Mudanças em workflows de CI/CD podem afetar o processo de deployment
-- Verificar se as dependências estão corretas no requirements.txt
+- Verificar se as mudanças não introduziram breaking changes
+- Validar se todas as dependências estão corretas
 
 **Sugestões de Testes Unitários:**
-- Testar se o workflow executa sem erros
-- Verificar se todas as dependências estão instaladas
-- Validar se as variáveis de ambiente estão configuradas
+- Adicionar testes para as novas funcionalidades
+- Verificar cobertura de testes para o código alterado
+- Testar cenários de edge cases
 
-**Diff analisado:**
-```
-{diff_content[:500]}...
-```
-        """
+*Nota: Análise gerada automaticamente. API da IA não disponível no momento.*"""
+        
         print(fallback_response)
-        # Não fazer sys.exit(1) para permitir que o comentário seja postado
 
 if __name__ == "__main__":
     main()
